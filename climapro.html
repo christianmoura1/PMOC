@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClimaPro — Gerador de PMOC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B1F2A;
+  --ink-soft:#3B5563;
+  --surface:#F2F7F9;
+  --card:#FFFFFF;
+  --frost:#DCEAF0;
+  --accent:#0E7C86;
+  --accent-deep:#0A5C64;
+  --ice:#9FD4DE;
+  --hot:#C4472F;
+  --ok:#1E7F4F;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(11,31,42,.06),0 8px 24px rgba(11,31,42,.07);
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'IBM Plex Sans',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--surface);color:var(--ink);font-size:15px;line-height:1.55}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
+
+/* ---------- Régua de frio (assinatura) ---------- */
+.frostline{height:4px;background:linear-gradient(90deg,#CFEAF0 0%,#7CC3D2 35%,#0E7C86 100%)}
+
+/* ---------- Topbar ---------- */
+.topbar{background:var(--ink);color:#fff;position:sticky;top:0;z-index:50}
+.topbar-inner{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.brand .mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#7CC3D2,#0E7C86);display:grid;place-items:center;font-size:14px}
+.brand small{font-family:var(--font-mono);font-weight:400;font-size:11px;color:var(--ice);letter-spacing:.06em}
+.topbar .spacer{flex:1}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;padding:7px 13px;border-radius:8px;font-size:13px;font-weight:500;transition:.15s}
+.btn-ghost:hover{border-color:var(--ice);color:var(--ice)}
+
+/* ---------- Tabs ---------- */
+.tabs{background:var(--card);border-bottom:1px solid var(--frost)}
+.tabs-inner{max-width:1100px;margin:0 auto;padding:0 20px;display:flex;gap:4px;overflow-x:auto}
+.tab{background:none;border:none;padding:14px 16px;font-size:14px;font-weight:600;color:var(--ink-soft);border-bottom:3px solid transparent;white-space:nowrap;transition:.15s}
+.tab:hover{color:var(--accent)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .count{font-family:var(--font-mono);font-size:11px;background:var(--surface);border:1px solid var(--frost);border-radius:20px;padding:1px 7px;margin-left:6px;color:var(--ink-soft)}
+
+/* ---------- Layout ---------- */
+.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
+.page-title{font-family:var(--font-display);font-weight:700;font-size:24px;letter-spacing:-.02em;margin-bottom:4px}
+.page-sub{color:var(--ink-soft);font-size:14px;margin-bottom:24px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:720px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* ---------- Cards ---------- */
+.card{background:var(--card);border:1px solid var(--frost);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-pad{padding:22px}
+.card h3{font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+
+/* ---------- Forms ---------- */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:5px}
+.field label .opt{font-weight:400;color:var(--ink-soft)}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--frost);border-radius:8px;background:#fff;transition:.15s;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,124,134,.12)}
+.field input.mono{font-family:var(--font-mono);font-size:14px}
+.hint{font-size:12px;color:var(--ink-soft);margin-top:4px}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:9px;padding:11px 18px;font-size:14px;font-weight:600;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-deep)}
+.btn-secondary{background:var(--card);color:var(--accent);border:1px solid var(--accent)}
+.btn-secondary:hover{background:#EAF5F6}
+.btn-soft{background:var(--surface);color:var(--ink);border:1px solid var(--frost)}
+.btn-soft:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:none;color:var(--hot);border:none;font-size:13px;padding:6px 10px}
+.btn-danger:hover{text-decoration:underline}
+.btn-lg{padding:14px 24px;font-size:15px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- Chips / badges ---------- */
+.chip{font-family:var(--font-mono);font-size:12px;border:1px solid var(--frost);background:var(--surface);border-radius:20px;padding:3px 10px;color:var(--ink-soft)}
+.chip.teal{background:#E7F3F4;border-color:#BFE0E4;color:var(--accent-deep)}
+.chip.hot{background:#FBEAE6;border-color:#F0C6BC;color:var(--hot)}
+.chip.ok{background:#E8F5EE;border-color:#BEE3CE;color:var(--ok)}
+.badge-law{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:8px}
+.badge-law.on{background:#E7F3F4;color:var(--accent-deep);border:1px solid #BFE0E4}
+.badge-law.off{background:var(--surface);color:var(--ink-soft);border:1px solid var(--frost)}
+
+/* ---------- Lists ---------- */
+.list-item{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--frost)}
+.list-item:last-child{border-bottom:none}
+.list-item .grow{flex:1;min-width:0}
+.list-item .title{font-weight:600;font-size:15px}
+.list-item .meta{font-size:13px;color:var(--ink-soft);margin-top:2px}
+.list-item .meta .mono{font-family:var(--font-mono);font-size:12px}
+.empty{padding:46px 20px;text-align:center;color:var(--ink-soft)}
+.empty .big{font-size:34px;margin-bottom:10px}
+.empty p{max-width:420px;margin:0 auto 16px}
+
+/* ---------- Wizard steps ---------- */
+.steps{display:flex;gap:0;margin-bottom:26px;border:1px solid var(--frost);border-radius:10px;overflow:hidden;background:var(--card)}
+.step{flex:1;padding:12px 10px;text-align:center;font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--card);border-right:1px solid var(--frost);position:relative}
+.step:last-child{border-right:none}
+.step .n{font-family:var(--font-mono);display:block;font-size:11px;margin-bottom:2px;color:var(--ink-soft)}
+.step.active{background:var(--ink);color:#fff}
+.step.active .n{color:var(--ice)}
+.step.done{color:var(--accent)}
+.step.done .n{color:var(--accent)}
+
+/* ---------- Checklist ---------- */
+.check-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--frost);border-radius:8px;margin-bottom:8px;background:#fff;font-size:14px}
+.check-row .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* ---------- Modal ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(11,31,42,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:100;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border-radius:14px;max-width:640px;width:100%;box-shadow:0 20px 60px rgba(11,31,42,.3)}
+.modal-head{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-family:var(--font-display);font-size:18px}
+.modal-body{padding:18px 24px 24px}
+.modal-close{background:none;border:none;font-size:22px;color:var(--ink-soft);line-height:1}
+
+/* ---------- Toast ---------- */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:200;box-shadow:var(--shadow)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---------- FAQ ---------- */
+details{border:1px solid var(--frost);border-radius:10px;background:var(--card);margin-bottom:10px}
+details summary{padding:14px 18px;font-weight:600;font-size:14px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details summary::after{content:"+";font-family:var(--font-mono);color:var(--accent);font-size:18px}
+details[open] summary::after{content:"–"}
+details .a{padding:0 18px 16px;font-size:14px;color:var(--ink-soft)}
+
+/* ---------- Stat cards ---------- */
+.stat{padding:18px 20px}
+.stat .v{font-family:var(--font-display);font-size:30px;font-weight:700;letter-spacing:-.02em}
+.stat .l{font-size:13px;color:var(--ink-soft);margin-top:2px}
+
+.tbl-mini{width:100%;border-collapse:collapse;font-size:13px}
+.tbl-mini th{text-align:left;font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);padding:8px 10px;border-bottom:1px solid var(--frost)}
+.tbl-mini td{padding:9px 10px;border-bottom:1px solid var(--frost)}
+.tbl-mini tr:last-child td{border-bottom:none}
+
+/* =============== PRINT DOCUMENT =============== */
+#docArea{display:none}
+@media print{
+  body *{visibility:hidden}
+  #docArea,#docArea *{visibility:visible}
+  #docArea{display:block;position:absolute;left:0;top:0;width:100%}
+  @page{size:A4;margin:14mm 13mm}
+}
+.doc{font-family:var(--font-body);color:#111;font-size:12px;line-height:1.45}
+.doc .doc-page{page-break-after:always}
+.doc .doc-page:last-child{page-break-after:auto}
+.doc .frostline{height:5px;margin-bottom:14px}
+.doc h1{font-family:var(--font-display);font-size:19px;letter-spacing:-.01em;margin-bottom:2px}
+.doc .doc-sub{font-size:11px;color:#555;margin-bottom:16px}
+.doc h2{font-family:var(--font-display);font-size:13px;background:#F2F7F9;border-left:4px solid var(--accent);padding:6px 10px;margin:18px 0 10px}
+.doc table{width:100%;border-collapse:collapse;font-size:11px}
+.doc th{background:#EAF2F5;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;text-align:left;padding:6px 7px;border:1px solid #C9DCE3}
+.doc td{padding:6px 7px;border:1px solid #C9DCE3;vertical-align:top}
+.doc .kv td:first-child{font-weight:600;width:34%;background:#FAFCFD}
+.doc .mono{font-family:var(--font-mono);font-size:10.5px}
+.doc .doc-foot{margin-top:18px;font-size:9.5px;color:#777;display:flex;justify-content:space-between;border-top:1px solid #DCEAF0;padding-top:6px}
+.doc .sig-line{margin-top:44px;border-top:1px solid #333;width:64%;padding-top:4px;font-size:10.5px}
+.doc .center{text-align:center}
+.doc .crono-x{font-family:var(--font-mono);font-weight:700;color:var(--accent-deep);text-align:center}
+.doc .small{font-size:10px;color:#555}
+
+/* ---------- Ativação / licença ---------- */
+#lockScreen{position:fixed;inset:0;background:var(--surface);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+#lockScreen.on{display:flex}
+.lock-card{background:var(--card);border:1px solid var(--frost);border-radius:16px;box-shadow:var(--shadow);max-width:430px;width:100%;overflow:hidden}
+.lock-card .lock-body{padding:30px 28px}
+.lock-card .brand{color:var(--ink);margin-bottom:18px}
+.lock-card h2{font-family:var(--font-display);font-size:20px;margin-bottom:6px}
+.lock-card p{font-size:14px;color:var(--ink-soft);margin-bottom:18px}
+.lock-msg{font-size:13px;margin-top:12px;min-height:18px}
+.lock-msg.err{color:var(--hot)}
+.lock-msg.ok{color:var(--ok)}
+</style>
+</head>
+<body>
+<div class="frostline"></div>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="mark">❄</span>ClimaPro <small>GERADOR DE PMOC</small></div>
+    <div class="spacer"></div>
+    <button class="btn-ghost" onclick="exportarBackup()">Salvar backup</button>
+    <button class="btn-ghost" onclick="document.getElementById('importFile').click()">Restaurar</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarBackup(event)">
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="tabs-inner">
+    <button class="tab active" data-tab="inicio" onclick="irPara('inicio')">Início</button>
+    <button class="tab" data-tab="empresa" onclick="irPara('empresa')">Minha empresa</button>
+    <button class="tab" data-tab="clientes" onclick="irPara('clientes')">Clientes<span class="count" id="countClientes">0</span></button>
+    <button class="tab" data-tab="gerar" onclick="irPara('gerar')">Gerar PMOC</button>
+    <button class="tab" data-tab="pmocs" onclick="irPara('pmocs')">PMOCs emitidos<span class="count" id="countPmocs">0</span></button>
+    <button class="tab" data-tab="ajuda" onclick="irPara('ajuda')">Ajuda</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ============ INÍCIO ============ -->
+  <section id="tab-inicio">
+    <p class="eyebrow">Painel</p>
+    <h1 class="page-title">Bem-vindo ao ClimaPro</h1>
+    <p class="page-sub">Cadastre seus clientes e equipamentos uma vez e gere o PMOC completo, pronto para assinar, em minutos.</p>
+    <div class="grid3" style="margin-bottom:20px">
+      <div class="card stat"><div class="v" id="statClientes">0</div><div class="l">clientes cadastrados</div></div>
+      <div class="card stat"><div class="v" id="statEquip">0</div><div class="l">equipamentos no inventário</div></div>
+      <div class="card stat"><div class="v" id="statPmocs">0</div><div class="l">PMOCs emitidos</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card card-pad">
+        <h3>Comece por aqui</h3>
+        <ol style="padding-left:18px;font-size:14px;color:var(--ink-soft);display:grid;gap:8px">
+          <li><strong style="color:var(--ink)">Minha empresa</strong> — preencha os dados da sua empresa e do responsável técnico. Você só faz isso uma vez.</li>
+          <li><strong style="color:var(--ink)">Clientes</strong> — cadastre o cliente e os equipamentos de climatização dele.</li>
+          <li><strong style="color:var(--ink)">Gerar PMOC</strong> — escolha o cliente, confirme o plano e imprima ou salve em PDF.</li>
+        </ol>
+        <div style="margin-top:16px"><button class="btn btn-primary" onclick="irPara('empresa')">Configurar minha empresa</button></div>
+      </div>
+      <div class="card card-pad">
+        <h3>Próximas manutenções</h3>
+        <div id="proximasList"><div class="empty" style="padding:20px"><p style="margin:0">Nenhum PMOC emitido ainda. As próximas manutenções programadas aparecerão aqui.</p></div></div>
+      </div>
+    </div>
+    <div class="card card-pad" style="margin-top:16px;background:linear-gradient(135deg,#0B1F2A 0%,#12333F 100%);color:#fff;border:none">
+      <h3 style="color:#fff">Seus dados ficam só com você</h3>
+      <p style="font-size:14px;color:#B9D3DA">Tudo é salvo neste navegador, neste computador. Ninguém mais tem acesso. Por isso, use o botão <strong style="color:#fff">Salvar backup</strong> no topo da tela de tempos em tempos — o arquivo gerado permite restaurar tudo em caso de troca de computador ou limpeza do navegador.</p>
+    </div>
+  </section>
+
+  <!-- ============ MINHA EMPRESA ============ -->
+  <section id="tab-empresa" style="display:none">
+    <p class="eyebrow">Configuração única</p>
+    <h1 class="page-title">Minha empresa</h1>
+    <p class="page-sub">Estes dados aparecem no cabeçalho de todos os PMOCs que você gerar.</p>
+    <div class="grid2">
+      <div class="card card-pad">
+        <h3>Dados da empresa</h3>
+        <div class="field"><label>Razão social ou nome</label><input id="emp_nome" placeholder="Ex.: Clima Sul Refrigeração LTDA"></div>
+        <div class="field"><label>CNPJ ou CPF <span class="opt">(opcional)</span></label><input id="emp_cnpj" class="mono" placeholder="00.000.000/0000-00"></div>
+        <div class="field"><label>Telefone / WhatsApp</label><input id="emp_fone" class="mono" placeholder="(41) 99999-9999"></div>
+        <div class="field"><label>E-mail <span class="opt">(opcional)</span></label><input id="emp_email" placeholder="contato@suaempresa.com.br"></div>
+        <div class="field"><label>Cidade / UF</label><input id="emp_cidade" placeholder="Curitiba / PR"></div>
+      </div>
+      <div class="card card-pad">
+        <h3>Responsável técnico</h3>
+        <div class="field"><label>Nome do responsável técnico</label><input id="rt_nome" placeholder="Nome completo"></div>
+        <div class="field"><label>Conselho</label>
+          <select id="rt_conselho">
+            <option value="CREA">CREA (engenheiro)</option>
+            <option value="CFT">CFT (técnico)</option>
+          </select>
+        </div>
+        <div class="field"><label>Número de registro</label><input id="rt_registro" class="mono" placeholder="Ex.: CREA-PR 123456/D"></div>
+        <div class="field"><label>Nº da ART / TRT <span class="opt">(opcional — pode preencher à mão depois)</span></label><input id="rt_art" class="mono" placeholder="Deixe em branco para sair como campo no documento"></div>
+        <p class="hint">A legislação exige que o PMOC seja assinado por profissional habilitado registrado no CREA ou CFT.</p>
+      </div>
+    </div>
+    <div style="margin-top:18px"><button class="btn btn-primary btn-lg" onclick="salvarEmpresa()">Salvar dados da empresa</button></div>
+  </section>
+
+  <!-- ============ CLIENTES ============ -->
+  <section id="tab-clientes" style="display:none">
+    <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+      <div style="flex:1;min-width:240px">
+        <p class="eyebrow">Cadastro</p>
+        <h1 class="page-title">Clientes e equipamentos</h1>
+        <p class="page-sub" style="margin-bottom:0">Cada cliente guarda seu próprio inventário de equipamentos.</p>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalCliente()">+ Novo cliente</button>
+    </div>
+    <div class="card" id="clientesList"></div>
+  </section>
+
+  <!-- ============ GERAR PMOC (WIZARD) ============ -->
+  <section id="tab-gerar" style="display:none">
+    <p class="eyebrow">Wizard</p>
+    <h1 class="page-title">Gerar PMOC</h1>
+    <p class="page-sub">Três passos e o documento sai pronto para imprimir ou salvar em PDF.</p>
+
+    <div class="steps">
+      <div class="step active" id="stepInd1"><span class="n">PASSO 1</span>Cliente</div>
+      <div class="step" id="stepInd2"><span class="n">PASSO 2</span>Plano de manutenção</div>
+      <div class="step" id="stepInd3"><span class="n">PASSO 3</span>Revisar e emitir</div>
+    </div>
+
+    <!-- Passo 1 -->
+    <div id="step1">
+      <div class="card card-pad">
+        <h3>Para qual cliente é este PMOC?</h3>
+        <div class="field"><label>Cliente</label>
+          <select id="wiz_cliente" onchange="wizClienteChange()"><option value="">Selecione…</option></select>
+        </div>
+        <div id="wiz_cliente_info"></div>
+      </div>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" id="btnStep1" onclick="wizIrPasso(2)" disabled>Continuar →</button>
+      </div>
+    </div>
+
+    <!-- Passo 2 -->
+    <div id="step2" style="display:none">
+      <div class="grid2">
+        <div class="card card-pad">
+          <h3>Periodicidade das manutenções</h3>
+          <div class="field"><label>Frequência</label>
+            <select id="wiz_period" onchange="wizAtualizarChecklist()">
+              <option value="mensal">Mensal (recomendado)</option>
+              <option value="bimestral">Bimestral</option>
+              <option value="trimestral">Trimestral</option>
+              <option value="semestral">Semestral</option>
+              <option value="anual">Anual</option>
+            </select>
+          </div>
+          <div class="field"><label>Início da vigência</label><input type="date" id="wiz_inicio"></div>
+          <div class="field"><label>Observações no documento <span class="opt">(opcional)</span></label><textarea id="wiz_obs" rows="3" placeholder="Ex.: acesso ao telhado somente com acompanhamento do zelador."></textarea></div>
+        </div>
+        <div class="card card-pad">
+          <h3>Atividades do plano <span class="chip teal" id="chipPeriod">mensal</span></h3>
+          <p class="hint" style="margin-bottom:12px">Checklist técnico já definido conforme a periodicidade. Ele entra no documento automaticamente.</p>
+          <div id="wiz_checklist"></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;justify-content:space-between">
+        <button class="btn btn-soft" onclick="wizIrPasso(1)">← Voltar</button>
+        <button class="btn btn-primary" onclick="wizIrPasso(3)">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- Passo 3 -->
+    <div id="step3" style="display:none">
+      <div class="card card-pad">
+        <h3>Revisão final</h3>
+        <div id="wiz_resumo"></div>
+      </div>
+      <div style="margin-top:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <button class="btn btn-soft" onclick="wizIrPasso(2)">← Voltar</button>
+        <button class="btn btn-primary btn-lg" onclick="emitirPMOC()">Emitir PMOC e abrir impressão</button>
+      </div>
+      <p class="hint" style="margin-top:10px">Na janela de impressão, escolha "Salvar como PDF" para gerar o arquivo digital.</p>
+    </div>
+  </section>
+
+  <!-- ============ PMOCS EMITIDOS ============ -->
+  <section id="tab-pmocs" style="display:none">
+    <p class="eyebrow">Histórico</p>
+    <h1 class="page-title">PMOCs emitidos</h1>
+    <p class="page-sub">Reimprima qualquer documento a qualquer momento.</p>
+    <div class="card" id="pmocsList"></div>
+  </section>
+
+  <!-- ============ AJUDA ============ -->
+  <section id="tab-ajuda" style="display:none">
+    <p class="eyebrow">Perguntas frequentes</p>
+    <h1 class="page-title">Ajuda</h1>
+    <p class="page-sub">Tudo o que você precisa saber para usar o ClimaPro sem depender de ninguém.</p>
+    <details><summary>O que é o PMOC e quem é obrigado a ter?</summary><div class="a">O PMOC (Plano de Manutenção, Operação e Controle) é exigido pela Lei Federal 13.589/2018 para edifícios de uso público e coletivo com ambientes climatizados. A referência usual de obrigatoriedade é a carga térmica total instalada a partir de 60.000 BTU/h — o ClimaPro soma automaticamente os equipamentos do cliente e indica quando esse limite é atingido.</div></details>
+    <details><summary>Como salvo o documento em PDF?</summary><div class="a">Ao clicar em "Emitir PMOC", a janela de impressão do navegador abre. No campo de impressora, escolha "Salvar como PDF" e confirme. O arquivo fica salvo no seu computador, pronto para enviar ao cliente.</div></details>
+    <details><summary>Onde ficam meus dados? Preciso de internet?</summary><div class="a">Os dados ficam salvos apenas neste navegador, neste computador — nada vai para servidores. Depois de aberto, o sistema funciona sem internet. Por isso é importante clicar em "Salvar backup" regularmente: o arquivo gerado restaura tudo em outro computador ou após limpeza do navegador.</div></details>
+    <details><summary>Troquei de computador. Como recupero meus cadastros?</summary><div class="a">No computador antigo, clique em "Salvar backup" no topo e guarde o arquivo. No novo computador, abra o ClimaPro e clique em "Restaurar", selecionando esse arquivo. Tudo volta: empresa, clientes, equipamentos e histórico.</div></details>
+    <details><summary>Quem pode assinar o PMOC?</summary><div class="a">Profissional legalmente habilitado: engenheiro registrado no CREA ou técnico registrado no CFT. O documento gerado já traz os campos de identificação do responsável técnico e da ART/TRT preenchidos com os dados da aba "Minha empresa".</div></details>
+    <details><summary>Posso alterar as atividades do checklist?</summary><div class="a">O checklist é padronizado por periodicidade seguindo as boas práticas do setor, o que garante um documento consistente e aceito em fiscalizações. Ajustes específicos do imóvel podem ser registrados no campo "Observações" do passo 2.</div></details>
+    <details><summary>O cronograma marca quais meses?</summary><div class="a">A partir do mês de início da vigência, o sistema marca automaticamente os meses de manutenção conforme a periodicidade escolhida (por exemplo, trimestral marca 4 visitas no ano).</div></details>
+  </section>
+</main>
+
+<!-- ============ MODAL CLIENTE ============ -->
+<div class="modal-bg" id="modalCliente">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalClienteTitle">Novo cliente</h3><button class="modal-close" onclick="fecharModal('modalCliente')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="cli_id">
+      <div class="field"><label>Razão social ou nome do cliente</label><input id="cli_nome" placeholder="Ex.: Supermercado Bom Preço LTDA"></div>
+      <div class="grid2">
+        <div class="field"><label>CNPJ / CPF <span class="opt">(opcional)</span></label><input id="cli_cnpj" class="mono"></div>
+        <div class="field"><label>Telefone <span class="opt">(opcional)</span></label><input id="cli_fone" class="mono"></div>
+      </div>
+      <div class="field"><label>Endereço do imóvel climatizado</label><input id="cli_end" placeholder="Rua, número, bairro, cidade / UF"></div>
+      <div class="field"><label>Responsável no local <span class="opt">(opcional)</span></label><input id="cli_resp"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px">
+        <button class="btn btn-soft" onclick="fecharModal('modalCliente')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarCliente()">Salvar cliente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL EQUIPAMENTO ============ -->
+<div class="modal-bg" id="modalEquip">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalEquipTitle">Novo equipamento</h3><button class="modal-close" onclick="fecharModal('modalEquip')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="eq_id"><input type="hidden" id="eq_cliente">
+      <div class="grid2">
+        <div class="field"><label>Tipo</label>
+          <select id="eq_tipo">
+            <option>Split Hi-Wall</option><option>Split Piso-Teto</option><option>Split Cassete</option>
+            <option>Split Dutado</option><option>ACJ (janela)</option><option>Multi Split</option>
+            <option>VRF / VRV</option><option>Self Contained</option><option>Chiller</option>
+            <option>Fancoil</option><option>Cortina de ar</option><option>Exaustor</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="field"><label>Capacidade (BTU/h)</label><input id="eq_btu" class="mono" type="number" placeholder="Ex.: 18000"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Marca <span class="opt">(opcional)</span></label><input id="eq_marca" placeholder="Ex.: Daikin"></div>
+        <div class="field"><label>Modelo <span class="opt">(opcional)</span></label><input id="eq_modelo" class="mono"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Nº de série <span class="opt">(opcional)</span></label><input id="eq_serie" class="mono"></div>
+        <div class="field"><label>Quantidade</label><input id="eq_qtd" class="mono" type="number" min="1" value="1"></div>
+      </div>
+      <div class="field"><label>Localização no imóvel</label><input id="eq_local" placeholder="Ex.: Recepção / Sala de reuniões / Salão de vendas"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px">
+        <button class="btn btn-soft" onclick="fecharModal('modalEquip')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEquip()">Salvar equipamento</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="lockScreen">
+  <div class="lock-card">
+    <div class="frostline"></div>
+    <div class="lock-body">
+      <div class="brand"><span class="mark">❄</span>ClimaPro <small>GERADOR DE PMOC</small></div>
+      <h2>Ativar seu acesso</h2>
+      <p>Digite a chave de licença que você recebeu por e-mail e na área de membros após a compra.</p>
+      <div class="field"><label>Chave de licença</label>
+        <input id="lock_chave" class="mono" placeholder="CLIMA-XXXX-XXXX" autocomplete="off" style="text-transform:uppercase">
+      </div>
+      <button class="btn btn-primary btn-lg" style="width:100%" id="lock_btn" onclick="ativarLicenca()">Ativar</button>
+      <div class="lock-msg" id="lock_msg"></div>
+      <p class="hint" style="margin-top:14px">Comprou e não recebeu a chave? Verifique o e-mail da compra (inclusive o spam) e a área de membros da plataforma.</p>
+    </div>
+  </div>
+</div>
+<div id="docArea"></div>
+
+<script>
+/* ================= ARMAZENAMENTO (com fallback em memória) ================= */
+const mem = {};
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)) ?? mem[k] ?? null; }catch(e){ return mem[k] ?? null; } },
+  set(k,v){ mem[k]=v; try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+let empresa  = store.get('cp_empresa')  || {};
+let clientes = store.get('cp_clientes') || [];
+let pmocs    = store.get('cp_pmocs')    || [];
+
+/* ================= CHECKLISTS PADRÃO (ClimaPro original) ================= */
+const CHECKLISTS = {
+  mensal: ["Limpeza de filtros","Verificação de gás refrigerante","Inspeção elétrica","Verificação de drenos","Teste de funcionamento"],
+  bimestral: ["Limpeza de filtros","Verificação de gás refrigerante","Inspeção elétrica","Verificação de drenos","Medição de amperagem","Teste de funcionamento"],
+  trimestral: ["Limpeza de filtros","Verificação de gás refrigerante","Inspeção elétrica completa","Verificação de drenos","Medição de amperagem","Verificação de pressões do sistema","Limpeza de condensador","Teste de funcionamento"],
+  semestral: ["Limpeza completa de filtros","Verificação e carga de gás refrigerante","Inspeção elétrica detalhada","Limpeza completa de drenos","Medição de amperagem e tensão","Verificação de pressões do sistema","Limpeza de evaporadora e condensadora","Lubrificação de motores","Verificação de isolamento térmico","Teste completo de funcionamento"],
+  anual: ["Limpeza completa de todos os componentes","Verificação e carga de gás refrigerante","Inspeção elétrica completa com teste de isolação","Limpeza e desinfecção de drenos","Medição de amperagem, tensão e resistência","Verificação completa de pressões","Limpeza profunda de evaporadora e condensadora","Lubrificação de todos os componentes móveis","Verificação completa de isolamento térmico","Teste de vazamentos","Verificação de dispositivos de segurança","Emissão de laudo técnico","Teste completo de funcionamento"]
+};
+const PERIOD_MESES = { mensal:1, bimestral:2, trimestral:3, semestral:6, anual:12 };
+const PERIOD_LABEL = { mensal:"Mensal", bimestral:"Bimestral", trimestral:"Trimestral", semestral:"Semestral", anual:"Anual" };
+const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+/* ================= UTILIDADES ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const fmtN = n => Number(n||0).toLocaleString('pt-BR');
+const fmtData = iso => { if(!iso) return "—"; const [a,m,d] = iso.split('-'); return `${d}/${m}/${a}`; };
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); }
+function fecharModal(id){ $(id).classList.remove('open'); }
+function btuTotal(cli){ return (cli.equipamentos||[]).reduce((s,e)=> s + (Number(e.btu)||0)*(Number(e.qtd)||1), 0); }
+
+/* ================= NAVEGAÇÃO ================= */
+function irPara(tab){
+  document.querySelectorAll('main > section').forEach(s => s.style.display='none');
+  $('tab-'+tab).style.display='block';
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+  if(tab==='gerar') wizInit();
+  window.scrollTo({top:0});
+}
+
+/* ================= MINHA EMPRESA ================= */
+function carregarEmpresa(){
+  $('emp_nome').value=empresa.nome||''; $('emp_cnpj').value=empresa.cnpj||'';
+  $('emp_fone').value=empresa.fone||''; $('emp_email').value=empresa.email||'';
+  $('emp_cidade').value=empresa.cidade||'';
+  $('rt_nome').value=empresa.rt_nome||''; $('rt_conselho').value=empresa.rt_conselho||'CREA';
+  $('rt_registro').value=empresa.rt_registro||''; $('rt_art').value=empresa.rt_art||'';
+}
+function salvarEmpresa(){
+  empresa = {
+    nome:$('emp_nome').value.trim(), cnpj:$('emp_cnpj').value.trim(),
+    fone:$('emp_fone').value.trim(), email:$('emp_email').value.trim(),
+    cidade:$('emp_cidade').value.trim(),
+    rt_nome:$('rt_nome').value.trim(), rt_conselho:$('rt_conselho').value,
+    rt_registro:$('rt_registro').value.trim(), rt_art:$('rt_art').value.trim()
+  };
+  if(!empresa.nome){ toast('Preencha o nome da empresa.'); return; }
+  if(!empresa.rt_nome){ toast('Preencha o responsável técnico.'); return; }
+  store.set('cp_empresa', empresa);
+  toast('Dados da empresa salvos.');
+  render();
+}
+
+/* ================= CLIENTES ================= */
+function abrirModalCliente(id){
+  $('cli_id').value = id||'';
+  $('modalClienteTitle').textContent = id ? 'Editar cliente' : 'Novo cliente';
+  const c = clientes.find(x=>x.id===id) || {};
+  $('cli_nome').value=c.nome||''; $('cli_cnpj').value=c.cnpj||'';
+  $('cli_fone').value=c.fone||''; $('cli_end').value=c.endereco||''; $('cli_resp').value=c.resp||'';
+  $('modalCliente').classList.add('open');
+}
+function salvarCliente(){
+  const nome=$('cli_nome').value.trim(), end=$('cli_end').value.trim();
+  if(!nome){ toast('Informe o nome do cliente.'); return; }
+  if(!end){ toast('Informe o endereço do imóvel.'); return; }
+  const id=$('cli_id').value;
+  const dados={ nome, cnpj:$('cli_cnpj').value.trim(), fone:$('cli_fone').value.trim(), endereco:end, resp:$('cli_resp').value.trim() };
+  if(id){ Object.assign(clientes.find(x=>x.id===id), dados); }
+  else { clientes.push({ id:uid(), equipamentos:[], ...dados }); }
+  store.set('cp_clientes', clientes);
+  fecharModal('modalCliente'); toast('Cliente salvo.'); render();
+}
+function excluirCliente(id){
+  const c=clientes.find(x=>x.id===id);
+  if(!confirm(`Excluir o cliente "${c.nome}" e todos os equipamentos dele?`)) return;
+  clientes = clientes.filter(x=>x.id!==id);
+  store.set('cp_clientes', clientes); toast('Cliente excluído.'); render();
+}
+
+/* ================= EQUIPAMENTOS ================= */
+function abrirModalEquip(clienteId, eqId){
+  $('eq_cliente').value=clienteId; $('eq_id').value=eqId||'';
+  $('modalEquipTitle').textContent = eqId ? 'Editar equipamento' : 'Novo equipamento';
+  const cli=clientes.find(x=>x.id===clienteId);
+  const e=(cli.equipamentos||[]).find(x=>x.id===eqId) || {};
+  $('eq_tipo').value=e.tipo||'Split Hi-Wall'; $('eq_btu').value=e.btu||'';
+  $('eq_marca').value=e.marca||''; $('eq_modelo').value=e.modelo||'';
+  $('eq_serie').value=e.serie||''; $('eq_qtd').value=e.qtd||1; $('eq_local').value=e.local||'';
+  $('modalEquip').classList.add('open');
+}
+function salvarEquip(){
+  const btu=Number($('eq_btu').value), local=$('eq_local').value.trim();
+  if(!btu || btu<=0){ toast('Informe a capacidade em BTU/h.'); return; }
+  if(!local){ toast('Informe a localização no imóvel.'); return; }
+  const cli=clientes.find(x=>x.id===$('eq_cliente').value);
+  const dados={ tipo:$('eq_tipo').value, btu, marca:$('eq_marca').value.trim(), modelo:$('eq_modelo').value.trim(), serie:$('eq_serie').value.trim(), qtd:Math.max(1,Number($('eq_qtd').value)||1), local };
+  const eqId=$('eq_id').value;
+  cli.equipamentos = cli.equipamentos||[];
+  if(eqId){ Object.assign(cli.equipamentos.find(x=>x.id===eqId), dados); }
+  else { cli.equipamentos.push({ id:uid(), ...dados }); }
+  store.set('cp_clientes', clientes);
+  fecharModal('modalEquip'); toast('Equipamento salvo.'); render();
+}
+function excluirEquip(clienteId, eqId){
+  const cli=clientes.find(x=>x.id===clienteId);
+  cli.equipamentos = cli.equipamentos.filter(x=>x.id!==eqId);
+  store.set('cp_clientes', clientes); toast('Equipamento excluído.'); render();
+}
+
+/* ================= RENDER GERAL ================= */
+function render(){
+  carregarEmpresa();
+  const totalEq = clientes.reduce((s,c)=> s+(c.equipamentos||[]).length, 0);
+  $('countClientes').textContent=clientes.length; $('countPmocs').textContent=pmocs.length;
+  $('statClientes').textContent=clientes.length; $('statEquip').textContent=totalEq; $('statPmocs').textContent=pmocs.length;
+  renderClientes(); renderPmocs(); renderProximas();
+}
+
+function renderClientes(){
+  const el=$('clientesList');
+  if(!clientes.length){
+    el.innerHTML='<div class="empty"><div class="big">🧊</div><p>Nenhum cliente cadastrado. Comece adicionando o primeiro — os equipamentos dele entram logo em seguida.</p><button class="btn btn-primary" onclick="abrirModalCliente()">+ Novo cliente</button></div>';
+    return;
+  }
+  el.innerHTML = clientes.map(c=>{
+    const total=btuTotal(c);
+    const obrig = total>=60000;
+    const eqRows = (c.equipamentos||[]).map(e=>`
+      <tr>
+        <td>${esc(e.tipo)}</td>
+        <td class="mono" style="font-family:var(--font-mono);font-size:12px">${fmtN(e.btu)} BTU/h × ${e.qtd}</td>
+        <td>${esc(e.local)}</td>
+        <td style="white-space:nowrap;text-align:right">
+          <button class="btn-danger" onclick="abrirModalEquip('${c.id}','${e.id}')" style="color:var(--accent)">Editar</button>
+          <button class="btn-danger" onclick="excluirEquip('${c.id}','${e.id}')">Excluir</button>
+        </td>
+      </tr>`).join('');
+    return `
+    <div style="border-bottom:1px solid var(--frost)">
+      <div class="list-item" style="border-bottom:none">
+        <div class="grow">
+          <div class="title">${esc(c.nome)}</div>
+          <div class="meta">${esc(c.endereco)}${c.cnpj?` · <span class="mono">${esc(c.cnpj)}</span>`:''}</div>
+        </div>
+        <span class="badge-law ${obrig?'on':'off'}" title="Carga térmica total instalada">${fmtN(total)} BTU/h ${obrig?'· PMOC obrigatório':''}</span>
+        <button class="btn btn-soft" onclick="abrirModalEquip('${c.id}')">+ Equipamento</button>
+        <button class="btn-danger" onclick="abrirModalCliente('${c.id}')" style="color:var(--accent)">Editar</button>
+        <button class="btn-danger" onclick="excluirCliente('${c.id}')">Excluir</button>
+      </div>
+      ${(c.equipamentos||[]).length ? `<div style="padding:0 20px 16px"><table class="tbl-mini"><thead><tr><th>Equipamento</th><th>Capacidade</th><th>Localização</th><th></th></tr></thead><tbody>${eqRows}</tbody></table></div>` : `<div style="padding:0 20px 16px"><p class="hint">Nenhum equipamento ainda — clique em "+ Equipamento".</p></div>`}
+    </div>`;
+  }).join('');
+}
+
+function renderPmocs(){
+  const el=$('pmocsList');
+  if(!pmocs.length){
+    el.innerHTML='<div class="empty"><div class="big">📄</div><p>Nenhum PMOC emitido ainda. Use a aba "Gerar PMOC" para criar o primeiro.</p></div>';
+    return;
+  }
+  el.innerHTML = [...pmocs].reverse().map(p=>`
+    <div class="list-item">
+      <div class="grow">
+        <div class="title">${esc(p.clienteNome)}</div>
+        <div class="meta">Emitido em ${fmtData(p.emitido)} · ${PERIOD_LABEL[p.period]} · vigência a partir de ${fmtData(p.inicio)} · <span class="mono">${p.equip.length} equip. / ${fmtN(p.btu)} BTU/h</span></div>
+      </div>
+      <span class="chip ok">próxima manutenção: ${fmtData(proximaData(p))}</span>
+      <button class="btn btn-secondary" onclick="reimprimir('${p.id}')">Reimprimir</button>
+      <button class="btn-danger" onclick="excluirPmoc('${p.id}')">Excluir</button>
+    </div>`).join('');
+}
+
+function proximaData(p){
+  const passo=PERIOD_MESES[p.period];
+  let d=new Date(p.inicio+'T12:00:00');
+  const hoje=new Date();
+  while(d<hoje){ d.setMonth(d.getMonth()+passo); }
+  return d.toISOString().slice(0,10);
+}
+function renderProximas(){
+  const el=$('proximasList');
+  if(!pmocs.length) return;
+  const itens=[...pmocs].map(p=>({p,d:proximaData(p)})).sort((a,b)=>a.d.localeCompare(b.d)).slice(0,5);
+  el.innerHTML = itens.map(({p,d})=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--frost)">
+      <div><strong style="font-size:14px">${esc(p.clienteNome)}</strong><div class="hint">${PERIOD_LABEL[p.period]}</div></div>
+      <span class="chip teal">${fmtData(d)}</span>
+    </div>`).join('');
+}
+function excluirPmoc(id){
+  if(!confirm('Excluir este PMOC do histórico?')) return;
+  pmocs=pmocs.filter(x=>x.id!==id); store.set('cp_pmocs',pmocs); toast('PMOC excluído.'); render();
+}
+
+/* ================= WIZARD ================= */
+let wizPasso=1;
+function wizInit(){
+  const sel=$('wiz_cliente');
+  sel.innerHTML='<option value="">Selecione…</option>'+clientes.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  if(!$('wiz_inicio').value){ $('wiz_inicio').value=new Date().toISOString().slice(0,10); }
+  wizAtualizarChecklist(); wizIrPasso(1); wizClienteChange();
+}
+function wizClienteChange(){
+  const id=$('wiz_cliente').value, info=$('wiz_cliente_info'), btn=$('btnStep1');
+  if(!id){ info.innerHTML=''; btn.disabled=true; return; }
+  const c=clientes.find(x=>x.id===id);
+  const n=(c.equipamentos||[]).length, total=btuTotal(c);
+  if(!empresa.nome || !empresa.rt_nome){
+    info.innerHTML='<p class="hint" style="color:var(--hot)">Preencha antes a aba "Minha empresa" — os dados do responsável técnico entram no documento.</p>'; btn.disabled=true; return;
+  }
+  if(!n){
+    info.innerHTML='<p class="hint" style="color:var(--hot)">Este cliente ainda não tem equipamentos cadastrados. Adicione na aba "Clientes".</p>'; btn.disabled=true; return;
+  }
+  info.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+    <span class="chip teal">${n} equipamento(s)</span>
+    <span class="chip ${total>=60000?'teal':''}">${fmtN(total)} BTU/h ${total>=60000?'· PMOC obrigatório por lei':''}</span>
+  </div>`;
+  btn.disabled=false;
+}
+function wizAtualizarChecklist(){
+  const p=$('wiz_period').value;
+  $('chipPeriod').textContent=PERIOD_LABEL[p].toLowerCase();
+  $('wiz_checklist').innerHTML=CHECKLISTS[p].map(a=>`<div class="check-row"><span class="dot"></span>${esc(a)}</div>`).join('');
+}
+function wizIrPasso(n){
+  wizPasso=n;
+  [1,2,3].forEach(i=>{
+    $('step'+i).style.display = i===n?'block':'none';
+    const ind=$('stepInd'+i);
+    ind.classList.toggle('active', i===n);
+    ind.classList.toggle('done', i<n);
+  });
+  if(n===3) montarResumo();
+}
+function montarResumo(){
+  const c=clientes.find(x=>x.id===$('wiz_cliente').value);
+  const p=$('wiz_period').value;
+  $('wiz_resumo').innerHTML=`
+    <table class="tbl-mini">
+      <tr><td style="font-weight:600;width:200px">Cliente</td><td>${esc(c.nome)}</td></tr>
+      <tr><td style="font-weight:600">Imóvel</td><td>${esc(c.endereco)}</td></tr>
+      <tr><td style="font-weight:600">Equipamentos</td><td>${(c.equipamentos||[]).length} itens · ${fmtN(btuTotal(c))} BTU/h</td></tr>
+      <tr><td style="font-weight:600">Periodicidade</td><td>${PERIOD_LABEL[p]} · ${CHECKLISTS[p].length} atividades por visita</td></tr>
+      <tr><td style="font-weight:600">Início da vigência</td><td>${fmtData($('wiz_inicio').value)}</td></tr>
+      <tr><td style="font-weight:600">Responsável técnico</td><td>${esc(empresa.rt_nome)} — ${esc(empresa.rt_conselho)} ${esc(empresa.rt_registro)}</td></tr>
+    </table>`;
+}
+
+/* ================= EMISSÃO / DOCUMENTO ================= */
+function emitirPMOC(){
+  const c=clientes.find(x=>x.id===$('wiz_cliente').value);
+  const registro={
+    id:uid(), clienteId:c.id, clienteNome:c.nome, clienteCnpj:c.cnpj, clienteEnd:c.endereco,
+    clienteFone:c.fone, clienteResp:c.resp,
+    equip:JSON.parse(JSON.stringify(c.equipamentos||[])),
+    btu:btuTotal(c),
+    period:$('wiz_period').value,
+    inicio:$('wiz_inicio').value,
+    obs:$('wiz_obs').value.trim(),
+    empresa:JSON.parse(JSON.stringify(empresa)),
+    emitido:new Date().toISOString().slice(0,10)
+  };
+  pmocs.push(registro); store.set('cp_pmocs',pmocs);
+  render();
+  imprimirDoc(registro);
+}
+function reimprimir(id){ const p=pmocs.find(x=>x.id===id); if(p) imprimirDoc(p); }
+
+function cronogramaMeses(p){
+  const passo=PERIOD_MESES[p.period];
+  const mesIni=new Date(p.inicio+'T12:00:00').getMonth();
+  const marcados=new Set();
+  for(let m=mesIni; m<mesIni+12; m+=passo){ marcados.add(m%12); }
+  return marcados;
+}
+
+function imprimirDoc(p){
+  const e=p.empresa||empresa;
+  const anoIni=new Date(p.inicio+'T12:00:00').getFullYear();
+  const marcados=cronogramaMeses(p);
+  const eqRows=p.equip.map((q,i)=>`
+    <tr>
+      <td class="center mono">${String(i+1).padStart(2,'0')}</td>
+      <td>${esc(q.tipo)}</td>
+      <td>${esc(q.marca||'—')} ${esc(q.modelo||'')}</td>
+      <td class="mono center">${fmtN(q.btu)}</td>
+      <td class="mono center">${q.qtd}</td>
+      <td class="mono">${esc(q.serie||'—')}</td>
+      <td>${esc(q.local)}</td>
+    </tr>`).join('');
+  const atividades=CHECKLISTS[p.period].map((a,i)=>`
+    <tr><td class="center mono">${String(i+1).padStart(2,'0')}</td><td>${esc(a)}</td><td class="center">${PERIOD_LABEL[p.period]}</td><td style="width:90px"></td></tr>`).join('');
+  const cronoCells=MESES.map((m,i)=>`<td class="${marcados.has(i)?'crono-x':''}">${marcados.has(i)?'✕':''}</td>`).join('');
+  const fichas=Array.from({length:8},()=>`
+    <tr><td style="height:34px;width:90px"></td><td></td><td style="width:150px"></td><td style="width:130px"></td></tr>`).join('');
+  const rodape=`<div class="doc-foot"><span>PMOC — ${esc(p.clienteNome)}</span><span>Emitido em ${fmtData(p.emitido)} por ${esc(e.nome)}</span></div>`;
+
+  $('docArea').innerHTML=`
+  <div class="doc">
+    <!-- PÁGINA 1 — IDENTIFICAÇÃO -->
+    <div class="doc-page">
+      <div class="frostline"></div>
+      <h1>Plano de Manutenção, Operação e Controle — PMOC</h1>
+      <div class="doc-sub">Lei Federal nº 13.589/2018 · Portaria GM/MS nº 3.523/1998 · ABNT NBR 16401</div>
+
+      <h2>1. Identificação do ambiente climatizado</h2>
+      <table class="kv">
+        <tr><td>Proprietário / Locatário</td><td>${esc(p.clienteNome)}</td></tr>
+        <tr><td>CNPJ / CPF</td><td class="mono">${esc(p.clienteCnpj||'—')}</td></tr>
+        <tr><td>Endereço do imóvel</td><td>${esc(p.clienteEnd)}</td></tr>
+        <tr><td>Responsável no local</td><td>${esc(p.clienteResp||'—')}</td></tr>
+        <tr><td>Telefone</td><td class="mono">${esc(p.clienteFone||'—')}</td></tr>
+        <tr><td>Carga térmica total instalada</td><td class="mono">${fmtN(p.btu)} BTU/h</td></tr>
+      </table>
+
+      <h2>2. Identificação da empresa mantenedora</h2>
+      <table class="kv">
+        <tr><td>Empresa</td><td>${esc(e.nome)}</td></tr>
+        <tr><td>CNPJ / CPF</td><td class="mono">${esc(e.cnpj||'—')}</td></tr>
+        <tr><td>Contato</td><td class="mono">${esc(e.fone||'—')}${e.email?' · '+esc(e.email):''}</td></tr>
+        <tr><td>Cidade / UF</td><td>${esc(e.cidade||'—')}</td></tr>
+      </table>
+
+      <h2>3. Identificação do responsável técnico</h2>
+      <table class="kv">
+        <tr><td>Nome</td><td>${esc(e.rt_nome)}</td></tr>
+        <tr><td>Registro profissional</td><td class="mono">${esc(e.rt_conselho)} ${esc(e.rt_registro)}</td></tr>
+        <tr><td>ART / TRT nº</td><td class="mono">${esc(e.rt_art||'')}</td></tr>
+      </table>
+
+      <h2>4. Vigência e periodicidade</h2>
+      <table class="kv">
+        <tr><td>Início da vigência</td><td>${fmtData(p.inicio)}</td></tr>
+        <tr><td>Periodicidade das manutenções</td><td>${PERIOD_LABEL[p.period]}</td></tr>
+        ${p.obs?`<tr><td>Observações</td><td>${esc(p.obs)}</td></tr>`:''}
+      </table>
+      ${rodape}
+    </div>
+
+    <!-- PÁGINA 2 — INVENTÁRIO -->
+    <div class="doc-page">
+      <div class="frostline"></div>
+      <h1>Inventário de equipamentos</h1>
+      <div class="doc-sub">${esc(p.clienteNome)} — ${esc(p.clienteEnd)}</div>
+      <table>
+        <thead><tr><th>Item</th><th>Tipo</th><th>Marca / Modelo</th><th>BTU/h</th><th>Qtd</th><th>Nº de série</th><th>Localização</th></tr></thead>
+        <tbody>${eqRows}
+          <tr><td colspan="3" style="font-weight:600;text-align:right">Carga térmica total</td><td class="mono center" style="font-weight:700">${fmtN(p.btu)}</td><td colspan="3"></td></tr>
+        </tbody>
+      </table>
+      <p class="small" style="margin-top:8px">${p.btu>=60000?'Carga térmica total igual ou superior a 60.000 BTU/h: manutenção do PMOC obrigatória nos termos da legislação vigente.':'Documento emitido em caráter preventivo e de boas práticas de manutenção.'}</p>
+      ${rodape}
+    </div>
+
+    <!-- PÁGINA 3 — PLANO DE MANUTENÇÃO + CRONOGRAMA -->
+    <div class="doc-page">
+      <div class="frostline"></div>
+      <h1>Plano de manutenção e cronograma</h1>
+      <div class="doc-sub">Atividades executadas a cada visita — periodicidade ${PERIOD_LABEL[p.period].toLowerCase()}</div>
+      <table>
+        <thead><tr><th>Nº</th><th>Atividade</th><th>Periodicidade</th><th>Executado (✓)</th></tr></thead>
+        <tbody>${atividades}</tbody>
+      </table>
+      <h2 style="margin-top:16px">Cronograma anual — ${anoIni}/${anoIni+1}</h2>
+      <table>
+        <thead><tr>${MESES.map(m=>`<th class="center">${m}</th>`).join('')}</tr></thead>
+        <tbody><tr>${cronoCells}</tr></tbody>
+      </table>
+      <p class="small" style="margin-top:6px">✕ = mês com manutenção programada, contado a partir do início da vigência.</p>
+      ${rodape}
+    </div>
+
+    <!-- PÁGINA 4 — REGISTRO DE EXECUÇÃO -->
+    <div class="doc-page">
+      <div class="frostline"></div>
+      <h1>Registro de execução das manutenções</h1>
+      <div class="doc-sub">Preencher a cada visita técnica e manter arquivado para fiscalização</div>
+      <table>
+        <thead><tr><th>Data</th><th>Atividades executadas / observações</th><th>Técnico executante</th><th>Assinatura</th></tr></thead>
+        <tbody>${fichas}</tbody>
+      </table>
+      <div style="display:flex;gap:40px">
+        <div class="sig-line">${esc(e.rt_nome)} — ${esc(e.rt_conselho)} ${esc(e.rt_registro)}<br><span class="small">Responsável técnico</span></div>
+        <div class="sig-line">${esc(p.clienteResp||p.clienteNome)}<br><span class="small">Proprietário / responsável pelo imóvel</span></div>
+      </div>
+      ${rodape}
+    </div>
+  </div>`;
+  setTimeout(()=>window.print(), 150);
+}
+
+/* ================= BACKUP ================= */
+function exportarBackup(){
+  const blob=new Blob([JSON.stringify({v:1, empresa, clientes, pmocs}, null, 2)], {type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='climapro-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Backup salvo. Guarde o arquivo em local seguro.');
+}
+function importarBackup(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!d || typeof d!=='object' || !('clientes' in d)) throw new Error();
+      empresa=d.empresa||{}; clientes=d.clientes||[]; pmocs=d.pmocs||[];
+      store.set('cp_empresa',empresa); store.set('cp_clientes',clientes); store.set('cp_pmocs',pmocs);
+      render(); toast('Backup restaurado com sucesso.');
+    }catch(e){ toast('Arquivo inválido. Use um backup gerado pelo ClimaPro.'); }
+  };
+  r.readAsText(f); ev.target.value='';
+}
+
+/* ================= LICENÇA ================= */
+/* Cole abaixo a URL do seu Apps Script (termina em /exec).
+   Enquanto url estiver vazia, o app roda LIVRE — modo de teste. */
+const LICENCA = {
+  url: "https://script.google.com/macros/s/AKfycby0P0Nq8CLDF29IILVMVwf7IzO0xB1qxl8OrmnfUExHdVBMhqOsRPmlj4O_jDldyu-p/exec",            // ex.: "https://script.google.com/macros/s/SEU_ID/exec"
+  revalidarDias: 7,   // revalida em segundo plano a cada X dias
+  graceDias: 30       // sem internet, continua funcionando por até X dias
+};
+
+function licencaLocal(){ return store.get('cp_licenca'); }
+function diasDesde(iso){ return (Date.now()-new Date(iso).getTime())/86400000; }
+
+async function consultarServidor(chave){
+  const r = await fetch(LICENCA.url + '?chave=' + encodeURIComponent(chave), {method:'GET'});
+  return await r.json(); // {ok:true} | {ok:false, motivo:'invalida'|'inativa'}
+}
+
+async function ativarLicenca(){
+  const chave = $('lock_chave').value.trim().toUpperCase();
+  const msg = $('lock_msg'), btn = $('lock_btn');
+  if(!chave){ msg.className='lock-msg err'; msg.textContent='Digite a chave recebida na compra.'; return; }
+  btn.disabled = true; msg.className='lock-msg'; msg.textContent='Verificando…';
+  try{
+    const res = await consultarServidor(chave);
+    if(res.ok){
+      store.set('cp_licenca', { chave, validadoEm: new Date().toISOString() });
+      msg.className='lock-msg ok'; msg.textContent='Acesso ativado!';
+      setTimeout(()=>{ $('lockScreen').classList.remove('on'); }, 500);
+    }else{
+      msg.className='lock-msg err';
+      msg.textContent = res.motivo==='inativa'
+        ? 'Esta chave está desativada. Fale com o suporte pelo e-mail da compra.'
+        : 'Chave não encontrada. Confira se digitou exatamente como recebeu.';
+    }
+  }catch(e){
+    msg.className='lock-msg err'; msg.textContent='Sem conexão. Conecte à internet para ativar pela primeira vez.';
+  }
+  btn.disabled = false;
+}
+
+async function verificarLicenca(){
+  if(!LICENCA.url){ return; } // modo de teste: sem trava
+  const lic = licencaLocal();
+  if(!lic){ $('lockScreen').classList.add('on'); return; }
+  if(diasDesde(lic.validadoEm) < LICENCA.revalidarDias){ return; } // dentro da janela, nem consulta
+  try{
+    const res = await consultarServidor(lic.chave);
+    if(res.ok){ store.set('cp_licenca', { chave: lic.chave, validadoEm: new Date().toISOString() }); }
+    else { store.set('cp_licenca', null); $('lockScreen').classList.add('on'); }
+  }catch(e){
+    // offline: tolera até graceDias desde a última validação
+    if(diasDesde(lic.validadoEm) > LICENCA.graceDias){ $('lockScreen').classList.add('on'); }
+  }
+}
+
+/* ================= INIT ================= */
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',ev=>{ if(ev.target===m) m.classList.remove('open'); }));
+$('lock_chave').addEventListener('keydown', ev=>{ if(ev.key==='Enter') ativarLicenca(); });
+render();
+verificarLicenca();
+</script>
+</body>
+</html>
