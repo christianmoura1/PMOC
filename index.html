@@ -891,7 +891,7 @@ function importarBackup(ev){
 /* Cole abaixo a URL do seu Apps Script (termina em /exec).
    Enquanto url estiver vazia, o app roda LIVRE — modo de teste. */
 const LICENCA = {
-  url: "https://script.google.com/macros/s/AKfycby0P0Nq8CLDF29IILVMVwf7IzO0xB1qxl8OrmnfUExHdVBMhqOsRPmlj4O_jDldyu-p/exec",            // ex.: "https://script.google.com/macros/s/SEU_ID/exec"
+  url: "https://script.google.com/macros/s/AKfycbxtWxnT1Dqn87iUsWqE5IrDN23RIbSYCVPwjxA56wEdeRxAA2FQBkf6GMhzsVnb4FIa/exec",
   revalidarDias: 7,   // revalida em segundo plano a cada X dias
   graceDias: 30       // sem internet, continua funcionando por até X dias
 };
@@ -900,8 +900,14 @@ function licencaLocal(){ return store.get('cp_licenca'); }
 function diasDesde(iso){ return (Date.now()-new Date(iso).getTime())/86400000; }
 
 async function consultarServidor(chave){
-  const r = await fetch(LICENCA.url + '?chave=' + encodeURIComponent(chave), {method:'GET'});
-  return await r.json(); // {ok:true} | {ok:false, motivo:'invalida'|'inativa'}
+  const r = await fetch(LICENCA.url + '?chave=' + encodeURIComponent(chave), {method:'GET', redirect:'follow'});
+  const txt = await r.text();
+  try{ return JSON.parse(txt); }catch(e){
+    /* Apps Script às vezes devolve HTML de redirecionamento; tenta extrair o JSON via URL final */
+    const m = txt.match(/https:\/\/script\.googleusercontent\.com[^"']*/);
+    if(m){ const r2 = await fetch(m[0]); return await r2.json(); }
+    throw e;
+  }
 }
 
 async function ativarLicenca(){
